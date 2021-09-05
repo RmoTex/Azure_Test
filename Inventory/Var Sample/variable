@@ -1,0 +1,25 @@
+#Ansible變數種類
+
+1.自行定義的變數，可以定義在 inventory、playbook 或者外部檔案再引入使用
+2.Ansible 搜集而來的機器資訊，稱為 fact，像是 IP、作業系統種類、版本等
+{
+    "ansible_all_ipv4_addresses": [
+        "REDACTED IP ADDRESS"
+    ],
+    "ansible_all_ipv6_addresses": [
+        "REDACTED IPV6 ADDRESS"
+    ],
+    "ansible_architecture": "x86_64",
+    "ansible_bios_date": "09/20/2012",
+    "ansible_bios_version": "6.00",
+    "ansible_cmdline": {
+        "BOOT_IMAGE": "/boot/vmlinuz-3.5.0-23-generic",
+        "quiet": true,
+        "ro": true,
+        "root": "UUID=4195bff4-e157-4e41-8701-e93f0aec9e22",
+        "splash": true
+    },
+3.儲存在遠端機器執行的指令結果，稱為 register
+- name: return motd to registered var
+  command: cat /etc/motd
+  register: mymotd
