@@ -1,15 +1,22 @@
 # 以下就是一個單獨的Play,一個Playbooks可以擁有多個Play，每個Play在可擁有多個tasks
 # hosts後面接Inventory(目標Server列表)定義的hosts
---- #以下為本區塊起點（非必要宣告）
 - hosts: webservers 
   #remoter_user定義登入遠端Server的帳號
   remote_user: root
+
   #變數宣告
   vars:
     greetings: Hellovars
+    loop_sample_i:
+    - I1
+    - I2
+    loop_sample_l:
+    - L1
+    - L2
   #引用外部變數檔案
   vars_files:
     - "目錄路徑/var.yml"
+
   #要對目標Server實作的動作，透過Module等小工具實現
   tasks:
   - name: ensure apache is at the latest version
@@ -18,21 +25,28 @@
       state: latest
   - name: write the apache config file
     debug:
-      # msg預設值為hello world
-      msg: "{{greedtings}}"
       # 錯誤類型輸出型別，默認等級為0（輸出顯示），可輸入1~5 >> 對於playbooks執行時帶的參數(-v~-vvvvv)
       verbosity: 3
+--- #以下為msg輸出格式範例
+      # msg預設值為hello world
+      # msg: "{{greedtings}}"
+      
+      # 單層迴圈輸出
+      # msg: "{{ item }}"
+      # with_items: "{{ loop_sample }}"
+      
+      # 雙層迴圈遍歷輸出
+      msg: "{{ item[0] }}. {{item[1]}}"
+      with_nested:
+        - "{{loop_sample_i}}"
+        - "{{loop_sample_l}}"
+...
+--- #以下為條件判斷範例
+      - command: /bin/shutdown -t now
+        #上面的判斷式要在下面的條件式滿足才會執行
+        when:
+          - (ansible_facts['distribution'] == "CentOS") or (??) 
+...
     template:
-      src: /srv/httpd.j2
+      src: /srv/httpd.j2 #Template採用jinja2的文件
       dest: /etc/httpd.conf
-... #以下為本區塊結束點
-
-
-- task: UsePythonVersion@0
-  inputs:
-    versionSpec: '$(python.version)'
-  displayName: 'Use Python $(python.version)'
-- script: |
-    python -m pip install --upgrade pip
-    pip install -r requirements.txt
-  displayName: 'Install dependencies'
