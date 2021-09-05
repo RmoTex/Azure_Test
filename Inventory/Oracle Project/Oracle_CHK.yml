@@ -1,0 +1,67 @@
+- name: Apply Oratab
+  template:
+    src: oratab.j2
+    dest: /etc/oratab
+    owner: root
+    group: root
+    mode: 0644
+  when: oracle_client_set_oratab
+
+- name: Make sure Network Admin folder exists
+  file:
+    path: "{{ oracle_client_oracle_home }}/network/admin"
+    state: directory
+    owner: "{{ __oracle_client_user }}"
+    group: "{{ __oracle_client_group }}"
+  when: oracle_client_set_tnsnames
+
+- name: Implement tnsnames.ora
+  template:
+    src: tnsnames.ora.j2
+    dest: "{{ oracle_client_oracle_home }}/network/admin/tnsnames.ora"
+    owner: "{{ __oracle_client_user }}"
+    group: "{{ __oracle_client_group }}"
+    mode: 0644
+  when: oracle_client_set_tnsnames
+
+- name: Set Oracle Client Environmental Variables
+  template:
+    src: oracle-client.sh.j2
+    dest: "/etc/profile.d/{{oracle_client_environment_shell_name}}"
+    owner: root
+    group: root
+    mode: 0644
+  when: oracle_client_set_environmental_variables
+
+- name: Check If Precompiler Installed
+  stat:
+    path: "{{ oracle_client_oracle_home }}/precomp/admin/pcscfg.cfg"
+  register: __oracle_client_precompiler
+
+- name: Check For Location of GCC Libraries for Precompiler
+  command: find /usr/lib/gcc -wholename "*/include"
+  changed_when: false
+  register: __oracle_client_gcc_libraries
+  when: __oracle_client_precompiler.stat.exists
+
+- name: Apply PreCompiler C Template
+  template:
+    src: pcscfg.cfg.j2
+    dest: "{{ oracle_client_oracle_home }}/precomp/admin/pcscfg.cfg"
+  when: __oracle_client_precompiler.stat.exists
+
+# Check oracle by simple sql
+- tasks:
+    - name: Execute table.sql using sqlplus 
+      shell: $ORACLE_HOME/bin/sqlplus -s username/password@connect @table.sql
+      # shell: echo exit |sqlplus "{{ oracle_username }}/ {{ oracle_pwd}} @(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(Host={{ oracle_hostname }} )(Port={{ oracle_port }}))(CONNECT_DATA=(SERVICE_NAME= {{ service_name }})))"@sqlfile.sql;
+      environment:
+        ORACLE_HOME: "{{oracle_home_path}}"
+        LD_LIBRARY_PATH: "{{ld_library_path}}"
+        PATH: "{{bin_path}}"
+
+
+# check oracle >> ps -ef|grep oracle
+# 檢查oracle 監聽是否啟動 >> lsnrctl status
+# 檢視資料庫版本資訊-透過sql plus下sql >> select * from v$version
+# 測試oracle是否能正常使用 >> tnsping 192.168.1.90:1521/oracle

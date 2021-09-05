@@ -1,0 +1,16 @@
+#SSH KEY linux flow localhost+Remote
+#1.local host >> ssh_keygen >> 產生private+public key
+#2.透過ssh-copy-id -i .ssh/privateKEY名稱 Remote
+#3.輸入remote密碼,在remote的.ssh/authorized.keys可以看到此密鑰
+#4.ssh -i .ssh/秘鑰 Remote >> 就可以遠端登入
+
+#SSH KEY SAMPLE
+- name: Add the user 'johnd' with a specific uid and a primary group of 'admin'
+  user:
+    name: johnd
+    comment: John Doe
+    uid: 1040
+    group: admin
+    generate_ssh_key: yes
+    ssh_key_bits: 2048
+    ssh_key_file: .ssh/id_rsa
