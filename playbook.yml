@@ -1,4 +1,6 @@
-# 以下就是一個單獨的Play,一個Playbooks可以擁有多個Play，每個Play在可擁有多個tasks
+# Playbooks等於劇本，一個劇本包含多個幕(play)，每一幕有一個角色(Role,像是目標主機)，這個角色需要完成數個任務(Tasks)
+
+### 以下就是一個單獨的Play,一個Playbooks可以擁有多個Play，每個Play在可擁有多個tasks
 # hosts後面接Inventory(目標Server列表)定義的hosts
 - hosts: webservers 
   #remoter_user定義登入遠端Server的帳號
@@ -19,15 +21,18 @@
 
   #要對目標Server實作的動作，透過Module等小工具實現
   tasks:
-  - name: ensure apache is at the latest version
-    yum:
+  - name: Ensure the httpd service is running
+    service:
       name: httpd
-      state: latest
+      state: started
+    become: yes #設成yes表示允許或打算以其他非登入身份執行此task
+    become_user: paas_ap #打算使用那個使用者身份來執行task，預設是root
+
   - name: write the apache config file
     debug:
       # 錯誤類型輸出型別，默認等級為0（輸出顯示），可輸入1~5 >> 對於playbooks執行時帶的參數(-v~-vvvvv)
-      verbosity: 3
---- #以下為msg輸出格式範例
+        verbosity: 3
+    #以下為msg輸出格式範例
       # msg預設值為hello world
       # msg: "{{greedtings}}"
       
@@ -36,17 +41,77 @@
       # with_items: "{{ loop_sample }}"
       
       # 雙層迴圈遍歷輸出
-      msg: "{{ item[0] }}. {{item[1]}}"
-      with_nested:
-        - "{{loop_sample_i}}"
-        - "{{loop_sample_l}}"
-...
---- #以下為條件判斷範例
-      - command: /bin/shutdown -t now
-        #上面的判斷式要在下面的條件式滿足才會執行
-        when:
-          - (ansible_facts['distribution'] == "CentOS") or (??) 
-...
+        msg: "{{ item[0] }}. {{item[1]}}"
+        with_nested:
+          - "{{loop_sample_i}}"
+          - "{{loop_sample_l}}"
+
+      #以下為條件判斷範例
+  - command: /bin/shutdown -t now
+    #上面的判斷式要在下面的條件式滿足才會執行
+    when:
+      - (ansible_facts['distribution'] == "CentOS") or (??) 
+
     template:
       src: /srv/httpd.j2 #Template採用jinja2的文件
       dest: /etc/httpd.conf
+
+### 以下為流程掌控的範例，在tasks執行完後，透過notify觸發handler的任務
+- tasks:
+      - name: template configuration file
+        template:
+        src: template.j2
+        dest: /etc/foo.conf
+        notify:
+        - restart memcached
+        - restart apache
+
+- handlers:
+    - name: restart memcached
+      service:
+        name: memcached
+        state: restarted
+    - name: restart apache
+      service:
+        name: apache
+        state: restarted
+
+# 以下為流程掌控的範例，透過Notify+Listen做任務觸發
+- handlers:
+    - name: restart memcached
+      service:
+        name: memcached
+        state: restarted
+      listen: "restart web services"
+    - name: restart apache
+      service:
+        name: apache
+        state: restarted
+      listen: "restart web services"
+
+- tasks:
+    - name: restart everything
+      command: echo "this task will restart the web services"
+      notify: "restart web services"
+
+### 以下為LOOP範例
+- name: add several users
+  user:
+    name: "{{ item.name }}"
+    state: present
+    groups: "{{ item.groups }}"
+  loop:
+    - { name: 'testuser1', groups: 'wheel' }
+    - { name: 'testuser2', groups: 'root' }
+
+
+# SSH KEY SAMPLE
+#- name: Add the user 'johnd' with a specific uid and a primary group of 'admin'
+#  user:
+#    name: johnd
+#    comment: John Doe
+#    uid: 1040
+#    group: admin
+#    generate_ssh_key: yes
+#    ssh_key_bits: 2048
+#    ssh_key_file: .ssh/id_rsa
