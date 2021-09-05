@@ -1,0 +1,22 @@
+# 以下就是一個單獨的Play,一個Playbooks可以擁有多個Play，每個Play在可擁有多個tasks
+# hosts後面接Inventory(目標Server列表)定義的hosts
+--- #以下為本區塊起點
+- hosts: webservers 
+  #remoter_user定義登入遠端Server的帳號
+  remote_user: root
+  #要對目標Server實作的動作，透過Module等小工具實現
+  tasks:
+  - name: ensure apache is at the latest version
+    yum:
+      name: httpd
+      state: latest
+  - name: write the apache config file
+    debug:
+      # msg預設值為hello world
+      msg: "Step 1"
+      # 錯誤類型輸出型別，默認等級為0（輸出顯示），可輸入1~5 >> 對於playbooks執行時帶的參數(-v~-vvvvv)
+      verbosity: 3
+    template:
+      src: /srv/httpd.j2
+      dest: /etc/httpd.conf
+... #以下為本區塊結束點
