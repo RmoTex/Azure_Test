@@ -59,7 +59,16 @@
         ORACLE_HOME: "{{oracle_home_path}}"
         LD_LIBRARY_PATH: "{{ld_library_path}}"
         PATH: "{{bin_path}}"
+        
+- tasks:
+    - command: /tmp/test.sh
+      register: result
 
+    - name: if stdout 'failed' ,Interrupt execution
+      fail: msg="check failed"
+      when: result.stdout == 'failed'
+
+    - file: path=/tmp/test state=directory
 
 # check oracle >> ps -ef|grep oracle
 # 檢查oracle 監聽是否啟動 >> lsnrctl status
